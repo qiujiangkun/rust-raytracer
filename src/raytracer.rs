@@ -1,6 +1,5 @@
-use image::png::PNGEncoder;
-use image::ColorType;
-use palette::Pixel;
+use eyre::*;
+use image::{ColorType, ImageEncoder};
 use palette::Srgb;
 use rand::Rng;
 use rayon::prelude::*;
@@ -15,6 +14,7 @@ use crate::ray::Hittable;
 use crate::ray::Ray;
 use crate::sphere::Sphere;
 
+use image::codecs::png::PngEncoder;
 #[cfg(test)]
 use std::fs;
 
@@ -30,14 +30,10 @@ use crate::materials::Lambertian;
 #[cfg(test)]
 use crate::materials::Light;
 
-fn write_image(
-    filename: &str,
-    pixels: &[u8],
-    bounds: (usize, usize),
-) -> Result<(), std::io::Error> {
+fn write_image(filename: &str, pixels: &[u8], bounds: (usize, usize)) -> Result<()> {
     let output = File::create(filename)?;
-    let encoder = PNGEncoder::new(output);
-    encoder.encode(pixels, bounds.0 as u32, bounds.1 as u32, ColorType::RGB(8))?;
+    let encoder = PngEncoder::new(output);
+    encoder.write_image(pixels, bounds.0 as u32, bounds.1 as u32, ColorType::Rgb8)?;
     Ok(())
 }
 
@@ -80,7 +76,7 @@ fn ray_color(
     if depth <= 0 {
         return Srgb::new(0.0, 0.0, 0.0);
     }
-    let hit = hit_world(&scene.objects, ray, 0.001, std::f64::MAX);
+    let hit = hit_world(&scene.objects, ray, 0.001, f64::MAX);
     match hit {
         Some(hit_record) => {
             let scattered = hit_record.material.scatter(ray, &hit_record);
@@ -135,28 +131,24 @@ fn ray_color(
             let t: f32 = clamp(0.5 * (ray.direction.unit_vector().y() as f32 + 1.0));
             let u: f32 = clamp(0.5 * (ray.direction.unit_vector().x() as f32 + 1.0));
             match &scene.sky {
-                None => {
-                    return Srgb::new(0.0, 0.0, 0.0);
-                }
+                None => Srgb::new(0.0, 0.0, 0.0),
                 Some(sky) => match &sky.texture {
-                    None => {
-                        return Srgb::new(
-                            (1.0 - t) * 1.0 + t * 0.5,
-                            (1.0 - t) * 1.0 + t * 0.7,
-                            (1.0 - t) * 1.0 + t * 1.0,
-                        );
-                    }
+                    None => Srgb::new(
+                        (1.0 - t) * 1.0 + t * 0.5,
+                        (1.0 - t) * 1.0 + t * 0.7,
+                        (1.0 - t) * 1.0 + t * 1.0,
+                    ),
                     Some((pixels, width, height, _)) => {
                         let x = (u * (*width - 1) as f32) as usize;
                         let y = ((1.0 - t) * (*height - 1) as f32) as usize;
                         let pixel_red = &pixels[(y * *width + x) * 3];
                         let pixel_green = &pixels[(y * *width + x) * 3 + 1];
                         let pixel_blue = &pixels[(y * *width + x) * 3 + 2];
-                        return Srgb::new(
+                        Srgb::new(
                             0.7 * *pixel_red as f32 / 255.0,
                             0.7 * *pixel_green as f32 / 255.0,
                             0.7 * *pixel_blue as f32 / 255.0,
-                        );
+                        )
                     }
                 },
             }
@@ -210,10 +202,10 @@ fn render_line(pixels: &mut [u8], scene: &Config, lights: &Vec<Sphere>, y: usize
             (scale * pixel_colors[1]).sqrt(),
             (scale * pixel_colors[2]).sqrt(),
         );
-        let pixel: [u8; 3] = color.into_format().into_raw();
-        pixels[x * 3] = pixel[0];
-        pixels[x * 3 + 1] = pixel[1];
-        pixels[x * 3 + 2] = pixel[2];
+        let (r, g, b) = color.into_format().into_components();
+        pixels[x * 3] = r;
+        pixels[x * 3 + 1] = g;
+        pixels[x * 3 + 2] = b;
     }
 }
 
@@ -239,9 +231,7 @@ fn test_find_lights() {
         Sphere::new(
             Point3D::new(0.0, 0.0, -1.0),
             0.5,
-            Material::Lambertian(Lambertian::new(Srgb::new(
-                0.5 as f32, 0.5 as f32, 0.5 as f32,
-            ))),
+            Material::Lambertian(Lambertian::new(Srgb::new(0.5, 0.5, 0.5))),
         ),
     ];
     assert_eq!(find_lights(&world).len(), 1);
