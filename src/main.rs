@@ -1,7 +1,10 @@
 use clap::Parser;
+use common::{info, setup_logs, LogLevel};
+use eyre::*;
 use raytracer::config::Config;
 use raytracer::raytracer::render;
 use std::fs;
+use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
 #[clap(
@@ -9,20 +12,26 @@ use std::fs;
     author = "Your Name",
     about = "Render scenes using a raytracer"
 )]
-struct Opts {
+struct Arguments {
     #[clap(help = "Sets the path to the configuration file")]
-    config_file: String,
+    config_file: PathBuf,
 
     #[clap(help = "Sets the path to the output file")]
-    output_file: String,
+    output_file: PathBuf,
 }
 
-fn main() {
-    let opts: Opts = Opts::parse();
+fn main() -> Result<()> {
+    setup_logs(LogLevel::Info)?;
+    let args: Arguments = Arguments::parse();
 
-    let json = fs::read(&opts.config_file).expect("Unable to read config file.");
+    let json = fs::read(&args.config_file).expect("Unable to read config file.");
     let scene = serde_json::from_slice::<Config>(&json).expect("Unable to parse config json");
 
-    println!("\nRendering {}", opts.output_file);
-    render(&opts.output_file, scene);
+    info!(
+        "Rendering {} -> {}",
+        args.config_file.display(),
+        args.output_file.display()
+    );
+    render(&args.output_file, scene)?;
+    Ok(())
 }

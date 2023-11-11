@@ -14,9 +14,11 @@ use crate::ray::Hittable;
 use crate::ray::Ray;
 
 use crate::body::{Body, Sphere};
+use common::info;
 use image::codecs::png::PngEncoder;
 #[cfg(test)]
 use std::fs;
+use std::path::Path;
 
 #[cfg(test)]
 use crate::point3d::Point3D;
@@ -30,7 +32,7 @@ use crate::materials::Lambertian;
 #[cfg(test)]
 use crate::materials::Light;
 
-fn write_image(filename: &str, pixels: &[u8], bounds: (usize, usize)) -> Result<()> {
+fn write_image(filename: &Path, pixels: &[u8], bounds: (usize, usize)) -> Result<()> {
     let output = File::create(filename)?;
     let encoder = PngEncoder::new(output);
     encoder.write_image(pixels, bounds.0 as u32, bounds.1 as u32, ColorType::Rgb8)?;
@@ -224,24 +226,7 @@ fn find_lights(world: &Vec<Body>) -> Vec<Sphere> {
         .collect()
 }
 
-#[test]
-fn test_find_lights() {
-    let world = vec![
-        Sphere::new(
-            Point3D::new(0.0, 0.0, -1.0),
-            0.5,
-            Material::Light(Light::new()),
-        ),
-        Sphere::new(
-            Point3D::new(0.0, 0.0, -1.0),
-            0.5,
-            Material::Lambertian(Lambertian::new(Srgb::new(0.5, 0.5, 0.5))),
-        ),
-    ];
-    assert_eq!(find_lights(&world).len(), 1);
-}
-
-pub fn render(filename: &str, scene: Config) {
+pub fn render(filename: &Path, scene: Config) -> Result<()> {
     let image_width = scene.width;
     let image_height = scene.height;
 
@@ -254,25 +239,52 @@ pub fn render(filename: &str, scene: Config) {
     bands.into_par_iter().for_each(|(i, band)| {
         render_line(band, &scene, &lights, i);
     });
-    println!("Frame time: {}ms", start.elapsed().as_millis());
+    info!("Frame time: {}ms", start.elapsed().as_millis());
 
-    write_image(filename, &pixels, (image_width, image_height)).expect("error writing image");
+    write_image(filename, &pixels, (image_width, image_height)).context("error writing image")?;
+    Ok(())
 }
+#[cfg(test)]
+mod tests {
+    use crate::body::Body;
+    use crate::config::Config;
+    use crate::materials::Material;
+    use crate::point3d::Point3D;
+    use crate::raytracer::{find_lights, render};
+    use std::path::Path;
 
-#[test]
-fn test_render_full_test_scene() {
-    let json = fs::read("data/test_scene.json").expect("Unable to read file");
-    let mut scene = serde_json::from_slice::<Config>(&json).expect("Unable to parse json");
-    scene.width = 80;
-    scene.height = 60;
-    render("/tmp/test_scene.png", scene);
-}
+    #[test]
+    fn test_find_lights() {
+        let world = vec![
+            Body::Sphere(Sphere::new(
+                Point3D::new(0.0, 0.0, -1.0),
+                0.5,
+                Material::Light(Light::new()),
+            )),
+            Body::Sphere(Sphere::new(
+                Point3D::new(0.0, 0.0, -1.0),
+                0.5,
+                Material::Lambertian(Lambertian::new(Srgb::new(0.5, 0.5, 0.5))),
+            )),
+        ];
+        assert_eq!(find_lights(&world).len(), 1);
+    }
 
-#[test]
-fn test_render_full_cover_scene() {
-    let json = fs::read("data/cover_scene.json").expect("Unable to read file");
-    let mut scene = serde_json::from_slice::<Config>(&json).expect("Unable to parse json");
-    scene.width = 40;
-    scene.height = 30;
-    render("/tmp/cover_scene.png", scene);
+    #[test]
+    fn test_render_full_test_scene() {
+        let json = fs::read("data/test_scene.json").expect("Unable to read file");
+        let mut scene = serde_json::from_slice::<Config>(&json).expect("Unable to parse json");
+        scene.width = 80;
+        scene.height = 60;
+        render(Path::new("/tmp/test_scene.png"), scene).unwrap();
+    }
+
+    #[test]
+    fn test_render_full_cover_scene() {
+        let json = fs::read("data/cover_scene.json").expect("Unable to read file");
+        let mut scene = serde_json::from_slice::<Config>(&json).expect("Unable to parse json");
+        scene.width = 40;
+        scene.height = 30;
+        render(Path::new("/tmp/cover_scene.png"), scene).unwrap();
+    }
 }
