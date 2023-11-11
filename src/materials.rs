@@ -108,19 +108,19 @@ impl Metal {
     }
 }
 
-fn reflect(v: &Point3D, n: &Point3D) -> Point3D {
-    *v - *n * (2.0 * v.dot(n))
+fn reflect(v: Point3D, n: Point3D) -> Point3D {
+    v - n * (2.0 * v.dot(n))
 }
 
 impl Scatterable for Metal {
     fn scatter(&self, ray: &Ray, hit_record: &HitRecord) -> Option<(Option<Ray>, Srgb)> {
-        let reflected = reflect(&ray.direction, &hit_record.normal);
+        let reflected = reflect(ray.direction, hit_record.normal);
         let scattered = Ray::new(
             hit_record.point,
             reflected + Point3D::random_in_unit_sphere() * self.fuzz,
         );
         let attenuation = self.albedo;
-        if scattered.direction.dot(&hit_record.normal) > 0.0 {
+        if scattered.direction.dot(hit_record.normal) > 0.0 {
             Some((Some(scattered), attenuation))
         } else {
             None
@@ -141,10 +141,10 @@ impl Glass {
     }
 }
 
-fn refract(uv: &Point3D, n: &Point3D, etai_over_etat: f64) -> Point3D {
-    let cos_theta = ((-*uv).dot(n)).min(1.0);
-    let r_out_perp = (*uv + *n * cos_theta) * etai_over_etat;
-    let r_out_parallel = *n * (-1.0 * (1.0 - r_out_perp.length_squared()).abs().sqrt());
+fn refract(uv: Point3D, n: Point3D, etai_over_etat: f64) -> Point3D {
+    let cos_theta = ((-uv).dot(n)).min(1.0);
+    let r_out_perp = (uv + n * cos_theta) * etai_over_etat;
+    let r_out_parallel = n * (-1.0 * (1.0 - r_out_perp.length_squared()).abs().sqrt());
     r_out_perp + r_out_parallel
 }
 
@@ -160,7 +160,7 @@ fn test_refract() {
     let n = Point3D::new(-1.0, 0.0, 0.0);
     let etai_over_etat = 1.0;
     let expected = Point3D::new(0.0, 1.0, 0.0);
-    let actual = refract(&uv, &n, etai_over_etat);
+    let actual = refract(uv, n, etai_over_etat);
     assert_eq!(actual, expected);
 }
 
@@ -183,15 +183,15 @@ impl Scatterable for Glass {
             self.index_of_refraction
         };
         let unit_direction = ray.direction.unit_vector();
-        let cos_theta = (-unit_direction).dot(&hit_record.normal).min(1.0);
+        let cos_theta = (-unit_direction).dot(hit_record.normal).min(1.0);
         let sin_theta = (1.0 - cos_theta * cos_theta).sqrt();
         let cannot_refract = refraction_ratio * sin_theta > 1.0;
         if cannot_refract || reflectance(cos_theta, refraction_ratio) > rng.gen::<f64>() {
-            let reflected = reflect(&unit_direction, &hit_record.normal);
+            let reflected = reflect(unit_direction, hit_record.normal);
             let scattered = Ray::new(hit_record.point, reflected);
             Some((Some(scattered), attenuation))
         } else {
-            let direction = refract(&unit_direction, &hit_record.normal, refraction_ratio);
+            let direction = refract(unit_direction, hit_record.normal, refraction_ratio);
             let scattered = Ray::new(hit_record.point, direction);
             Some((Some(scattered), attenuation))
         }
@@ -265,19 +265,23 @@ impl Scatterable for Texture {
         Some((Some(scattered), attenuation))
     }
 }
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-#[test]
-fn test_texture() {
-    let _world = Material::Texture(Texture::new(
-        Srgb::new(1.0, 1.0, 1.0),
-        "data/earth.jpg",
-        0.0,
-    ));
-}
+    #[test]
+    fn test_texture() {
+        let _world = Material::Texture(Texture::new(
+            Srgb::new(1.0, 1.0, 1.0),
+            "data/earth.jpg",
+            0.0,
+        ));
+    }
 
-#[test]
-fn test_to_json() {
-    let m = Metal::new(Srgb::new(0.8, 0.8, 0.8), 2.0);
-    let serialized = serde_json::to_string(&m).unwrap();
-    assert_eq!(r#"{"albedo":[0.8,0.8,0.8],"fuzz":2.0}"#, serialized,);
+    #[test]
+    fn test_to_json() {
+        let m = Metal::new(Srgb::new(0.8, 0.8, 0.8), 2.0);
+        let serialized = serde_json::to_string(&m).unwrap();
+        assert_eq!(r#"{"albedo":[0.8,0.8,0.8],"fuzz":2.0}"#, serialized,);
+    }
 }

@@ -69,11 +69,11 @@ impl Point3D {
         Point3D::new(self.x / length, self.y / length, self.z / length)
     }
 
-    pub fn dot(&self, other: &Point3D) -> f64 {
+    pub fn dot(&self, other: Point3D) -> f64 {
         self.x * other.x + self.y * other.y + self.z * other.z
     }
 
-    pub fn cross(&self, other: &Point3D) -> Point3D {
+    pub fn cross(&self, other: Point3D) -> Point3D {
         Point3D::new(
             self.y * other.z - self.z * other.y,
             self.z * other.x - self.x * other.z,
@@ -246,7 +246,7 @@ fn test_div() {
 fn test_dot() {
     let p = Point3D::new(0.1, 0.2, 0.3);
     let q = Point3D::new(0.2, 0.3, 0.4);
-    assert_approx_eq!(p.dot(&q), 0.2);
+    assert_approx_eq!(p.dot(q), 0.2);
 }
 
 #[test]

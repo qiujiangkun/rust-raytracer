@@ -6,13 +6,13 @@ use rayon::prelude::*;
 use std::fs::File;
 use std::time::Instant;
 
+use crate::body::sphere::Sphere;
 use crate::config::Config;
 use crate::materials::Material;
 use crate::materials::Scatterable;
 use crate::ray::HitRecord;
 use crate::ray::Hittable;
 use crate::ray::Ray;
-use crate::sphere::Sphere;
 
 use image::codecs::png::PngEncoder;
 #[cfg(test)]

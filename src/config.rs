@@ -12,8 +12,8 @@ use crate::materials::Lambertian;
 use crate::materials::Material;
 use crate::materials::Metal;
 use crate::point3d::Point3D;
-use crate::sphere::Sphere;
 
+use crate::body::sphere::Sphere;
 #[cfg(test)]
 use std::fs;
 

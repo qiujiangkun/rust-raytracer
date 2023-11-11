@@ -54,8 +54,8 @@ impl Camera {
         let half_width = aspect * half_height;
 
         let w = (look_from - look_at).unit_vector();
-        let u = vup.cross(&w).unit_vector();
-        let v = w.cross(&u);
+        let u = vup.cross(w).unit_vector();
+        let v = w.cross(u);
 
         let origin = look_from;
         let lower_left_corner = origin - (u * half_width) - (v * half_height) - w;

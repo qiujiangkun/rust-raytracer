@@ -46,7 +46,7 @@ impl Hittable for Sphere {
     fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
         let oc = ray.origin - self.center;
         let a = ray.direction.length_squared();
-        let half_b = oc.dot(&ray.direction);
+        let half_b = oc.dot(ray.direction);
         let c = oc.length_squared() - self.radius * self.radius;
         let discriminant = (half_b * half_b) - (a * c);
 
@@ -58,7 +58,7 @@ impl Hittable for Sphere {
                 if *root < t_max && *root > t_min {
                     let p = ray.at(*root);
                     let normal = (p - self.center) / self.radius;
-                    let front_face = ray.direction.dot(&normal) < 0.0;
+                    let front_face = ray.direction.dot(normal) < 0.0;
 
                     let (u, v) = u_v_from_sphere_hit_point(p - self.center);
 
@@ -92,9 +92,7 @@ fn test_to_json() {
     let sphere = Sphere::new(
         Point3D::new(0.0, 0.0, 0.0),
         1.0,
-        Material::Lambertian(Lambertian::new(Srgb::new(
-            0.5 as f32, 0.5 as f32, 0.5 as f32,
-        ))),
+        Material::Lambertian(Lambertian::new(Srgb::new(0.5, 0.5, 0.5))),
     );
     let serialized = serde_json::to_string(&sphere).unwrap();
     assert_eq!(
@@ -109,7 +107,7 @@ fn test_to_json() {
         Point3D::new(0.0, 0.0, 0.0),
         1.0,
         Material::Texture(Texture::new(
-            Srgb::new(0.5 as f32, 0.5 as f32, 0.5 as f32),
+            Srgb::new(0.5, 0.5, 0.5),
             "data/earth.jpg",
             0.0,
         )),
@@ -121,11 +119,7 @@ fn test_to_json() {
         tserialized,
     );
 
-    let tex = Texture::new(
-        Srgb::new(0.5 as f32, 0.5 as f32, 0.5 as f32),
-        "data/earth.jpg",
-        0.0,
-    );
+    let tex = Texture::new(Srgb::new(0.5, 0.5, 0.5), "data/earth.jpg", 0.0);
     let tloadable = "{\"center\":{\"x\":0.0,\"y\":0.0,\"z\":0.0},\"radius\":1.0,\"material\":{\"Texture\":{\"albedo\":[0.5,0.5,0.5],\"pixels\":\"data/earth.jpg\",\"width\":2048,\"height\":1024,\"h_offset\":0.0}}}";
     let loaded = serde_json::from_str::<Sphere>(&tloadable).unwrap();
     match loaded.material {
