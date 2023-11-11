@@ -6,7 +6,6 @@ use rayon::prelude::*;
 use std::fs::File;
 use std::time::Instant;
 
-use crate::body::sphere::Sphere;
 use crate::config::Config;
 use crate::materials::Material;
 use crate::materials::Scatterable;
@@ -14,6 +13,7 @@ use crate::ray::HitRecord;
 use crate::ray::Hittable;
 use crate::ray::Ray;
 
+use crate::body::{Body, Sphere};
 use image::codecs::png::PngEncoder;
 #[cfg(test)]
 use std::fs;
@@ -38,7 +38,7 @@ fn write_image(filename: &str, pixels: &[u8], bounds: (usize, usize)) -> Result<
 }
 
 fn hit_world<'material>(
-    world: &'material Vec<Sphere>,
+    world: &'material Vec<Body>,
     r: &Ray,
     t_min: f64,
     t_max: f64,
@@ -209,9 +209,13 @@ fn render_line(pixels: &mut [u8], scene: &Config, lights: &Vec<Sphere>, y: usize
     }
 }
 
-fn find_lights(world: &Vec<Sphere>) -> Vec<Sphere> {
+fn find_lights(world: &Vec<Body>) -> Vec<Sphere> {
     world
         .iter()
+        .flat_map(|x| match x {
+            Body::Sphere(s) => Some(s),
+            _ => None,
+        })
         .filter(|s| match s.material {
             Material::Light(_) => true,
             _ => false,

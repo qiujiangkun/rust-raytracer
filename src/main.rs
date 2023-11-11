@@ -1,20 +1,28 @@
-use std::env;
-use std::fs;
-
+use clap::Parser;
 use raytracer::config::Config;
 use raytracer::raytracer::render;
+use std::fs;
+
+#[derive(Parser, Debug)]
+#[clap(
+    version = "1.0",
+    author = "Your Name",
+    about = "Render scenes using a raytracer"
+)]
+struct Opts {
+    #[clap(help = "Sets the path to the configuration file")]
+    config_file: String,
+
+    #[clap(help = "Sets the path to the output file")]
+    output_file: String,
+}
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
-    if args.len() != 3 {
-        println!("Usage: {} <config_file> <output_file>", args[0]);
-        return;
-    }
+    let opts: Opts = Opts::parse();
 
-    let json = fs::read(&args[1]).expect("Unable to read config file.");
+    let json = fs::read(&opts.config_file).expect("Unable to read config file.");
     let scene = serde_json::from_slice::<Config>(&json).expect("Unable to parse config json");
 
-    let filename = &args[2]; //format!("{}_{:0>3}.png", args[2], i);
-    println!("\nRendering {}", filename);
-    render(&filename, scene);
+    println!("\nRendering {}", opts.output_file);
+    render(&opts.output_file, scene);
 }
