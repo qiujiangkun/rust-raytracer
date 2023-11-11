@@ -9,7 +9,7 @@ use std::path::PathBuf;
 #[derive(Parser, Debug)]
 #[clap(
     version = "1.0",
-    author = "Your Name",
+    author = "Jakku Sakura",
     about = "Render scenes using a raytracer"
 )]
 struct Arguments {
@@ -24,8 +24,8 @@ fn main() -> Result<()> {
     setup_logs(LogLevel::Info)?;
     let args: Arguments = Arguments::parse();
 
-    let json = fs::read(&args.config_file).expect("Unable to read config file.");
-    let scene = serde_json::from_slice::<Config>(&json).expect("Unable to parse config json");
+    let json = fs::read(&args.config_file).context("Unable to read config file.")?;
+    let scene: Config = serde_json::from_slice(&json).context("Unable to parse config json")?;
 
     info!(
         "Rendering {} -> {}",
